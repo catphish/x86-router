@@ -66,7 +66,7 @@ void nic_reset(struct nic *nic) {
   write_register(nic, RDLEN, sizeof(struct rx_descriptor) * RING_SIZE);
   // Set head and tail offsets of ring 0 to zero
   write_register(nic, RDH, 0);
-  write_register(nic, RDT, 1);
+  write_register(nic, RDT, 0);
   // Set "next" offet for ring 0
   nic->ring_next = 0;
   // Configure settings for receive ring 0 and enable it
