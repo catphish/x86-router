@@ -66,26 +66,31 @@ void nic_reset(struct nic *nic) {
   write_register(nic, RDLEN, sizeof(struct rx_descriptor) * RING_SIZE);
   // Set head and tail offsets of ring 0 to zero
   write_register(nic, RDH, 0);
-  write_register(nic, RDT, 0);
+  write_register(nic, RDT, 1);
+  // Set "next" offet for ring 0
+  nic->ring_next = 0;
   // Configure settings for receive ring 0 and enable it
   write_register(nic, RXDCTL, 0x2010A0C);
   // Enable NIC global receive, and turn on promiscuous mode for now
   write_register(nic, RCTL, (1<<1)|(1<<3)|(1<<4));
 
   // Start ring 0 by incrementing the tail offset to the end
-  write_register(nic, RDT, RING_SIZE - 1);
+  write_register(nic, RDT, RING_SIZE-1);
 }
 
 void nic_rx(struct nic *nic) {
-  uint32_t rdh, rdt;
-  rdh = read_register(nic, RDH) & 0xffff;
-  rdt = read_register(nic, RDT) & 0xffff;
-  write_register(nic, RDT, (rdh+RING_SIZE-1)%RING_SIZE);
-  puthex32(rdh);
-  putchar(' ');
-  puthex32(rdt);
-  putchar(' ');
-  puthex32(nic->rx_ring[rdt].status);
-  putchar(' ');  puthex32(read_register(nic, STATUS));
-  putchar('\n');
+  // Read next descriptor, wait for status bit 0 to be set
+  if(nic->rx_ring[nic->ring_next].status & 0x1) {
+    // We've processed this descriptor so zero its status
+    nic->rx_ring[nic->ring_next].status = 0;
+    // Set the tail just behind the descriptor just processed
+    // We keep it behind to avoid it collinding with head
+    write_register(nic, RDT, nic->ring_next);
+
+    // Calculate the offset for the next descriptor
+    nic->ring_next = (nic->ring_next + 1) % RING_SIZE;;
+
+    // Everyone likes dots
+    putchar('.');
+  }
 }

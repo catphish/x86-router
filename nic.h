@@ -15,6 +15,7 @@ struct rx_descriptor {
 struct nic {
   struct rx_descriptor rx_ring[RING_SIZE];
   uint32_t base_address;
+  uint32_t ring_next;
 };
 
 void nic_reset(struct nic *nic);
