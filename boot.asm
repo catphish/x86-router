@@ -24,14 +24,17 @@ global start
 start:
     mov esp, stack_top
 
+    ;call disable_pic
     call set_up_page_tables
     call enable_paging
+    extern set_up_gdt
+    call set_up_gdt
 
     push ebx
+    ;sti
     extern kernel_main
     call kernel_main
 
-    cli
     hlt
 
 set_up_page_tables:
@@ -65,4 +68,10 @@ enable_paging:
     or eax, 1 << 31
     mov cr0, eax
 
+    ret
+
+disable_pic:
+    mov al, 0xff
+    out 0xa1, al
+    out 0x21, al
     ret
