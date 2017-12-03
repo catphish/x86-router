@@ -101,6 +101,7 @@ void nic_reset(struct nic *nic) {
     // Allocate 2kB per frame
     nic->tx_ring[n].address_upper = 0;
     nic->tx_ring[n].address = (uint32_t)malloc(2048);
+    nic->tx_ring[n].status = 1;
   }
   write_register(nic, TDH, 0);
   write_register(nic, TDT, 0);
@@ -113,14 +114,33 @@ void nic_reset(struct nic *nic) {
 
 uint32_t count = 0;
 
-void nic_tx(struct nic *txnic) {
-  txnic->tx_ring[txnic->tx_ring_next].length = 600;
-  txnic->tx_ring[txnic->tx_ring_next].cmd = 3;
-  txnic->tx_ring[txnic->tx_ring_next].status = 0;
-  txnic->tx_ring[txnic->tx_ring_next].vlan_tag = 0;
-  txnic->tx_ring[txnic->tx_ring_next].css = 0;
-  txnic->tx_ring[txnic->tx_ring_next].cso = 0;
-  txnic->tx_ring_next = (txnic->tx_ring_next + 1) % RING_SIZE;
+void nic_forward(struct nic *rxnic, struct nic *txnic) {
+  while(rxnic->rx_ring[rxnic->rx_ring_next].status & 0x1) {
+    if(txnic->tx_ring[txnic->tx_ring_next].status & 0x1) {
+      // Data pointer swap
+      uint32_t tmp_ptr;
+      tmp_ptr = txnic->tx_ring[txnic->tx_ring_next].address;
+      txnic->tx_ring[txnic->tx_ring_next].address = rxnic->rx_ring[rxnic->rx_ring_next].address;
+      rxnic->rx_ring[rxnic->rx_ring_next].address = tmp_ptr;
+
+      // Copy length
+      txnic->tx_ring[txnic->tx_ring_next].length = rxnic->rx_ring[rxnic->rx_ring_next].length;
+      // Set tx params
+      txnic->tx_ring[txnic->tx_ring_next].cmd = 11;
+      txnic->tx_ring[txnic->tx_ring_next].status = 0;
+
+      // Incremement TX pointer
+      txnic->tx_ring_next = (txnic->tx_ring_next + 1) % RING_SIZE;
+    } else {
+      putchar('.');
+    }
+    // We've processed this RX descriptor so zero its status
+    rxnic->rx_ring[rxnic->rx_ring_next].status = 0;
+
+    // Incremement RX pointer
+    rxnic->rx_ring_next = (rxnic->rx_ring_next + 1) % RING_SIZE;
+  }
+  write_register(rxnic, RDT, (rxnic->rx_ring_next - 1) % RING_SIZE);
   write_register(txnic, TDT, txnic->tx_ring_next);
 }
 

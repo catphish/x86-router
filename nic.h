@@ -32,5 +32,5 @@ struct nic {
 };
 
 void nic_reset(struct nic *nic);
-void nic_tx(struct nic *txnic);
+void nic_forward(struct nic *rxnic, struct nic *txnic);
 void nic_tx_status(struct nic *txnic);
