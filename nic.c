@@ -42,9 +42,21 @@ void nic_reset(struct nic *nic) {
   int n;
   // We could disable interrupts, reset the NIC, and disable them again.
   // The documentation suggests doing this.
-  //write_register(nic, 0x1528, 0xffffffff);
-  //write_register(nic, 0, 1<<29);
-  //write_register(nic, 0x1528, 0xffffffff);
+  write_register(nic, 0x1528, 0xffffffff);
+  putstring("Disabling bus master\n");
+  write_register(nic, CTRL, read_register(nic, CTRL) | (1<<2));
+  while(read_register(nic, STATUS) & (1<<19)) {
+    puthex32(read_register(nic, STATUS));
+    putchar('\n');
+  }
+
+  putstring("Resetting\n");
+  write_register(nic, CTRL, read_register(nic, CTRL) | (1<<26));
+  while(!(read_register(nic, STATUS) & (1<<21))) {
+    puthex32(read_register(nic, STATUS));
+    putchar('\n');
+  }
+  write_register(nic, 0x1528, 0xffffffff);
 
   // Pretty simple base setup, enable link, auto-negotiate everything
   write_register(nic, CTRL, 1<<6);
@@ -61,7 +73,7 @@ void nic_reset(struct nic *nic) {
   for(int n=0;n<RING_SIZE;n++) {
     // Allocate 2kB per frame
     nic->rx_ring[n].address_upper = 0;
-    nic->rx_ring[n].address = malloc(2048);
+    nic->rx_ring[n].address = (uint32_t)malloc(2048);
   }
 
   // Configure multi-ring receive to default single ring operation
@@ -88,7 +100,7 @@ void nic_reset(struct nic *nic) {
   for(int n=0;n<RING_SIZE;n++) {
     // Allocate 2kB per frame
     nic->tx_ring[n].address_upper = 0;
-    nic->tx_ring[n].address = malloc(2048);
+    nic->tx_ring[n].address = (uint32_t)malloc(2048);
   }
   write_register(nic, TDH, 0);
   write_register(nic, TDT, 0);
@@ -101,45 +113,20 @@ void nic_reset(struct nic *nic) {
 
 uint32_t count = 0;
 
-void nic_rx(struct nic *nic, struct nic *txnic) {
-  uint32_t rx_final;
-  unsigned int changed = 0;
-  // Read next descriptor, wait for status bit 0 to be set
-  while(nic->rx_ring[nic->rx_ring_next].status & 0x1) {
-    changed = 1;
-    // Swap data with the TX buffer
-    void *tmp_ptr;
-    tmp_ptr = txnic->tx_ring[txnic->tx_ring_next].address;
-    txnic->tx_ring[txnic->tx_ring_next].address = nic->rx_ring[nic->rx_ring_next].address;
-    nic->rx_ring[nic->rx_ring_next].address = tmp_ptr;
-    txnic->tx_ring[txnic->tx_ring_next].length = nic->rx_ring[nic->rx_ring_next].length;
-    txnic->tx_ring[txnic->tx_ring_next].cmd = 3;
-    txnic->tx_ring[txnic->tx_ring_next].status = 0;
+void nic_tx(struct nic *txnic) {
+  txnic->tx_ring[txnic->tx_ring_next].length = 600;
+  txnic->tx_ring[txnic->tx_ring_next].cmd = 3;
+  txnic->tx_ring[txnic->tx_ring_next].status = 0;
+  txnic->tx_ring[txnic->tx_ring_next].vlan_tag = 0;
+  txnic->tx_ring[txnic->tx_ring_next].css = 0;
+  txnic->tx_ring[txnic->tx_ring_next].cso = 0;
+  txnic->tx_ring_next = (txnic->tx_ring_next + 1) % RING_SIZE;
+  write_register(txnic, TDT, txnic->tx_ring_next);
+}
 
-    // We've processed this descriptor so zero its status
-    nic->rx_ring[nic->rx_ring_next].status = 0;
-
-    // Calculate the offset for the next descriptors
-    rx_final = nic->rx_ring_next;
-    nic->rx_ring_next = (nic->rx_ring_next + 1) % RING_SIZE;
-    txnic->tx_ring_next = (txnic->tx_ring_next + 1) % RING_SIZE;
-
-    // Everyone likes dots
-    //count++;
-    //if(count == 1490000) {
-    //puthex32(read_register(txnic, TDH));
-    //putchar(' ');
-    //puthex32(read_register(txnic, TDT));
-    //putchar('\n');
-    //putchar('.');
-    //  count = 0;
-    //}
-  }
-  if(changed) {
-    //  Set the tail just behind the descriptor just processed
-    // We keep it behind to avoid it collinding with head
-    write_register(nic, RDT, rx_final);
-    // Increment the TX pointer
-    write_register(txnic, TDT, txnic->tx_ring_next);
-  }
+void nic_tx_status(struct nic *txnic) {
+  puthex32(read_register(txnic, TDT));
+  putchar(' ');
+  puthex32(read_register(txnic, TDH));
+  putchar('\n');
 }

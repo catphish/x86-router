@@ -20,23 +20,37 @@ void kernel_main(multiboot_info_t* mbd) {
   uint32_t bus;
   uint32_t device;
 
-  struct nic *nic;
-  nic = malloc(sizeof(struct nic) * 4);
+  struct nic *nic[32];
   int n = 0;
   for(bus=0;bus<256;bus++) {
     for(device = 0; device < 32; device++) {
       tmp = pciConfigRead(bus,device,0,0);
       if(tmp == 0x15218086) {
-        nic[n].base_address = pciConfigRead(bus,device,0,0x10) & 0xfffffff0;
-        nic_reset(nic+n);
-        putstring("NIC detected.\n");
+        nic[n] = malloc(sizeof(struct nic));
+        nic[n]->base_address = pciConfigRead(bus,device,0,0x10) & 0xfffffff0;
+        nic_reset(nic[n]);
+        putstring("NIC detected.");
+        puthex8(bus);
+        putchar(' ');
+        puthex8(device);
+        putchar('\n');
         n++;
       }
     }
   }
   putstring("Done.\n");
+
   while(1) {
-    nic_rx(nic+0, nic+2);
-    nic_rx(nic+3, nic+1);
+    unsigned int i;
+
+    i = 0x10000000;
+    while(--i) asm("");
+    nic_tx(nic[0]);
+    nic_tx(nic[1]);
+
+    i = 0x10000000;
+    while(--i) asm("");
+    nic_tx_status(nic[0]);
+    nic_tx_status(nic[1]);
   }
 }

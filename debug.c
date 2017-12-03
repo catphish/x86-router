@@ -33,3 +33,7 @@ void puthex32(uint32_t i) {
 	putchar(bchars[(i >> 4)  & 0xF]);
 	putchar(bchars[(i >> 0)  & 0xF]);
 }
+void puthex8(uint8_t i) {
+	putchar(bchars[(i >> 4)  & 0xF]);
+	putchar(bchars[(i >> 0)  & 0xF]);
+}

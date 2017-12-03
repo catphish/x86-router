@@ -1,27 +1,27 @@
 #include "stdint.h"
 
-#define RING_SIZE 32
+#define RING_SIZE 128
 
 struct rx_descriptor {
-  void *address;
-  uint32_t address_upper;
+  volatile uint32_t address;
+  volatile uint32_t address_upper;
   volatile uint16_t length;
-  uint16_t checksum;
+  volatile uint16_t checksum;
   volatile uint8_t status;
-  uint8_t errors;
-  uint16_t vlan_tag;
-};
+  volatile uint8_t errors;
+  volatile uint16_t vlan_tag;
+}__attribute__((packed));
 
 struct tx_descriptor {
-  void *address;
-  uint32_t address_upper;
+  volatile uint32_t address;
+  volatile uint32_t address_upper;
   volatile uint16_t length;
-  uint8_t cso;
+  volatile uint8_t cso;
   volatile uint8_t cmd;
   volatile uint8_t status;
-  uint8_t css;
-  uint16_t vlan_tag;
-};
+  volatile uint8_t css;
+  volatile uint16_t vlan_tag;
+}__attribute__((packed));
 
 struct nic {
   struct rx_descriptor rx_ring[RING_SIZE];
@@ -32,4 +32,5 @@ struct nic {
 };
 
 void nic_reset(struct nic *nic);
-void nic_rx(struct nic *nic, struct nic *txnic);
+void nic_tx(struct nic *txnic);
+void nic_tx_status(struct nic *txnic);
