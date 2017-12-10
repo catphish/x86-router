@@ -24,7 +24,7 @@ global start
 start:
     mov esp, stack_top
 
-    ;call disable_pic
+    call disable_pic
     call set_up_page_tables
     call enable_paging
     extern set_up_gdt
@@ -35,7 +35,10 @@ start:
     extern kernel_main
     call kernel_main
 
+    ;cli
+forever:
     hlt
+    jmp forever
 
 set_up_page_tables:
     mov ecx, 0         ; counter variable
