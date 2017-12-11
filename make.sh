@@ -6,6 +6,7 @@ nasm -f elf32 boot.asm
 nasm -f elf32 gdt.asm
 nasm -f elf32 idt.asm
 ~/i686-elf-4.9.1-Linux-x86_64/bin/i686-elf-gcc -c kernel.c -o kernel.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra
+~/i686-elf-4.9.1-Linux-x86_64/bin/i686-elf-gcc -c cpu2.c -o cpu2.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra
 ~/i686-elf-4.9.1-Linux-x86_64/bin/i686-elf-gcc -c pci.c -o pci.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra
 ~/i686-elf-4.9.1-Linux-x86_64/bin/i686-elf-gcc -c debug.c -o debug.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra
 ~/i686-elf-4.9.1-Linux-x86_64/bin/i686-elf-gcc -c nic.c -o nic.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra
@@ -14,7 +15,7 @@ nasm -f elf32 idt.asm
 ld -m elf_i386 -n -o kernel.bin -T linker.ld *.o
 #scp kernel.bin 10.0.2.49:kernel.bin
 #ssh 10.0.2.49
-sudo kvm -kernel kernel.bin -m 128M -chardev stdio,id=mydebug -device isa-debugcon,chardev=mydebug -display none
+sudo kvm -kernel kernel.bin -smp cores=2,threads=1,sockets=1 -m 128M -chardev stdio,id=mydebug -device isa-debugcon,chardev=mydebug -display none
 #-device pci-assign,host=08:00.0 \
 #-device pci-assign,host=08:00.1 \
 #-device pci-assign,host=08:00.2 \

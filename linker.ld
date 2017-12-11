@@ -10,6 +10,13 @@ SECTIONS {
         boot.o(.text)
     }
 
+    . = ALIGN(4096);
+
+    .cpu2 :
+    {
+     cpu2.o(.text)
+    }
+
     .text :
     {
         *(.text)
@@ -24,6 +31,7 @@ SECTIONS {
     {
         *(.bss)
     }
+
     . = ALIGN(4096);
     _end = .;
 }

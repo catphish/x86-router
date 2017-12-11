@@ -12,43 +12,44 @@ void kernel_main(multiboot_info_t* mbd) {
   (void)(mbd); // Suppress warning abut mbd, we'll use this later
   putstring("Hello world. I am a router. Moo.\n");
 
-  volatile uint32_t *lapic_task_priority = (void*)0xFEE00080;
+  //volatile uint32_t *lapic_task_priority = (void*)0xFEE00080;
   volatile uint32_t *lapic_timer_interrupt_vector = (void*)0xFEE00320;
-  volatile uint32_t *lapic_performance_counter_interrupt = (void*)0xFEE00340;
-  volatile uint32_t *lapic_local_interrupt_0 = (void*)0xFEE00350;
-  volatile uint32_t *lapic_local_interrupt_1 = (void*)0xFEE00360;
-  volatile uint32_t *lapic_error_interrupt = (void*)0xFEE00370;
-  volatile uint32_t *lapic_spurious_interrupt = (void*)0xFEE000F0;
+  //volatile uint32_t *lapic_performance_counter_interrupt = (void*)0xFEE00340;
+  //volatile uint32_t *lapic_local_interrupt_0 = (void*)0xFEE00350;
+  //volatile uint32_t *lapic_local_interrupt_1 = (void*)0xFEE00360;
+  //volatile uint32_t *lapic_error_interrupt = (void*)0xFEE00370;
+  //volatile uint32_t *lapic_spurious_interrupt = (void*)0xFEE000F0;
   volatile uint32_t *lapic_timer_divide = (void*)0xFEE003E0;
   volatile uint32_t *lapic_timer_initial_count = (void*)0xFEE00380;
-  puthex32(*lapic_task_priority);
-  putchar('\n');
-  puthex32(*lapic_timer_interrupt_vector);
-  putchar('\n');
-  puthex32(*lapic_performance_counter_interrupt);
-  putchar('\n');
-  puthex32(*lapic_local_interrupt_0);
-  putchar('\n');
-  puthex32(*lapic_local_interrupt_1);
-  putchar('\n');
-  puthex32(*lapic_error_interrupt);
-  putchar('\n');
-  puthex32(*lapic_spurious_interrupt);
-  putchar('\n');
-  puthex32(*lapic_timer_divide);
-  putchar('\n');
-  puthex32(*lapic_timer_initial_count);
-  putchar('\n');
   *lapic_timer_interrupt_vector = 0x20020;
   *lapic_timer_divide = 0b1011;
   //asm volatile("int $0x3");
   //asm volatile("int $0x4");
-  asm volatile("mov $27, %ecx");
-  asm volatile("rdmsr");
-  asm volatile("bts $11, %eax");
-  asm volatile("wrmsr");
-  *lapic_timer_initial_count = 62500000;
+  asm volatile(
+    "mov $27, %%ecx\n\t"
+    "rdmsr\n\t"
+    "bts $11, %%eax\n\t"
+    "wrmsr\n\t" : : : "eax", "ebx", "ecx", "edx"
+  );
+  *lapic_timer_initial_count = 1000000000;
   asm volatile("sti");
+
+  //extern char _cpu2;
+
+  volatile uint32_t *lapic_timer_interrupt_300 = (void*)0xFEE00300;
+  volatile uint32_t *lapic_timer_interrupt_310 = (void*)0xFEE00310;
+  *lapic_timer_interrupt_310 = 0x00000000;
+  *lapic_timer_interrupt_300 = 0x000C4500;
+    int i = 1000000000;
+    while(--i)
+        asm("");
+  putstring("Hello world. I am a router. Moose.\n");
+  *lapic_timer_interrupt_300 = 0x00004600 + 2;
+    i = 1000000000;
+    while(--i)
+        asm("");
+  putstring("Hello world. I am a router. Moose.\n");
+  *lapic_timer_interrupt_300 = 0x00004601 + 2;
   //asm volatile("hlt");
   //puthex8(1 / 0);
 
