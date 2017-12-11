@@ -2,5 +2,5 @@
 #include "debug.h"
 
 void cpu2() {
-  putchar(1/0);
+  while(1) asm("hlt");
 }

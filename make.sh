@@ -15,7 +15,7 @@ nasm -f elf32 idt.asm
 ld -m elf_i386 -n -o kernel.bin -T linker.ld *.o
 #scp kernel.bin 10.0.2.49:kernel.bin
 #ssh 10.0.2.49
-sudo kvm -kernel kernel.bin -smp cores=2,threads=1,sockets=1 -m 128M -chardev stdio,id=mydebug -device isa-debugcon,chardev=mydebug -display none
+sudo kvm -kernel kernel.bin -smp cores=2,threads=1,sockets=1 -m 128M -chardev stdio,id=mydebug -device isa-debugcon,chardev=mydebug
 #-device pci-assign,host=08:00.0 \
 #-device pci-assign,host=08:00.1 \
 #-device pci-assign,host=08:00.2 \

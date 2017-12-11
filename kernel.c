@@ -8,6 +8,7 @@
 #include "interrupt.h"
 
 void kernel_main(multiboot_info_t* mbd) {
+  unsigned int i;
   idt_install();
   (void)(mbd); // Suppress warning abut mbd, we'll use this later
   putstring("Hello world. I am a router. Moo.\n");
@@ -36,20 +37,26 @@ void kernel_main(multiboot_info_t* mbd) {
 
   //extern char _cpu2;
 
-  volatile uint32_t *lapic_timer_interrupt_300 = (void*)0xFEE00300;
-  volatile uint32_t *lapic_timer_interrupt_310 = (void*)0xFEE00310;
-  *lapic_timer_interrupt_310 = 0x00000000;
-  *lapic_timer_interrupt_300 = 0x000C4500;
-    int i = 1000000000;
-    while(--i)
-        asm("");
-  putstring("Hello world. I am a router. Moose.\n");
-  *lapic_timer_interrupt_300 = 0x00004600 + 2;
-    i = 1000000000;
-    while(--i)
-        asm("");
-  putstring("Hello world. I am a router. Moose.\n");
-  *lapic_timer_interrupt_300 = 0x00004601 + 2;
+  // Set up pointers to IPI registers in the LAPIC
+  volatile uint32_t *lapic_offset_300 = (void*)0xFEE00300;
+  volatile uint32_t *lapic_offset_310 = (void*)0xFEE00310;
+
+  // We're not addressing a specific CPU
+  *lapic_offset_310 = 0x00000000;
+
+  // Send the INIT (reset) to all AP
+  putstring("Sending INIT\n");
+  *lapic_offset_300 = 0x000C4500;
+
+  // Sleep a little
+  i = 0xffffffff; while(--i) asm("");
+
+  // Send the SIPI to commence execution
+  // Send to all AP, begin execution at page 8 (0x8000)
+  putstring("Sending SIPI\n");
+  *lapic_offset_310 = 0x00000000;
+  *lapic_offset_300 = 0x000C4600+0x8;
+
   //asm volatile("hlt");
   //puthex8(1 / 0);
 
