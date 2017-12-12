@@ -7,16 +7,16 @@
 #include "malloc.h"
 #include "interrupt.h"
 
-void cpu2() {
-  putstring("Hello from CPU 2");
+void ap_c_entry() {
+  putstring("Hello from additional CPU\n");
   while(1) asm("hlt");
 }
 
 void install_ap_entry() {
-  extern char ap_entry[];
-  extern uint32_t ap_length;
+  extern char ap_asm_start[];
+  extern uint32_t ap_asm_length;
   putstring("Copying AP boot code.\n");
-  memcpy((char*)0x80000, ap_entry, ap_length);
+  memcpy((char*)0x80000, ap_asm_start, ap_asm_length);
 }
 
 void kernel_main(multiboot_info_t* mbd) {
@@ -62,7 +62,7 @@ void kernel_main(multiboot_info_t* mbd) {
   *lapic_offset_300 = 0x000C4500;
 
   // Sleep a little
-  i = 0xffffffff; while(--i) asm("");
+  i = 0x1fffffff; while(--i) asm("");
 
   // Send the SIPI to commence execution
   // Send to all AP, begin execution at page 8 (0x8000)
