@@ -5,7 +5,7 @@ rm -f *.o
 nasm -f elf32 boot.asm
 nasm -f elf32 gdt.asm
 nasm -f elf32 idt.asm
-nasm -f elf32 cpu2.asm
+nasm -f elf32 ap.asm
 ~/i686-elf-4.9.1-Linux-x86_64/bin/i686-elf-gcc -c kernel.c -o kernel.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra
 ~/i686-elf-4.9.1-Linux-x86_64/bin/i686-elf-gcc -c pci.c -o pci.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra
 ~/i686-elf-4.9.1-Linux-x86_64/bin/i686-elf-gcc -c debug.c -o debug.o -std=gnu99 -ffreestanding -O2 -Wall -Wextra
