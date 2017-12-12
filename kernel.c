@@ -8,7 +8,10 @@
 #include "interrupt.h"
 
 void ap_c_entry() {
-  putstring("Hello from additional CPU\n");
+  volatile uint32_t *lapic_id = (void*)0xFEE00020;
+  putstring("Hello from additional CPU ");
+  puthex8(*lapic_id>>24);
+  putchar('\n');
   while(1) asm("hlt");
 }
 
