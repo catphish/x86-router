@@ -21,6 +21,7 @@ gdt_pointer:
 
 past_header:
   cli
+  mov esp, stack_top
 
   lgdt [cs:gdt_pointer - ap_entry]
   mov ax, 0x10
@@ -30,28 +31,18 @@ past_header:
   mov fs, ax
   mov gs, ax
 
-  ; load page_directory to cr3 register
-  mov eax, page_directory
-  mov cr3, eax
-
-  ; enable PSE for 4MB pages
-  mov eax, cr4
-  or eax, 0x00000010
-  mov cr4, eax
-
-  ; enable paging and protected mode in the cr0 register
-  or eax, 0x80000011
+  ; enable protected mode in the cr0 register
+  mov eax, cr0
+  or eax, 0x1
   mov cr0, eax
-  ;hlt
-  cli
-  [bits 32]
-  jmp 0x8:.ret
-  .ret:
-  hlt
-
-  ;mov eax, cr0
-  ;or al, 1       ; set PE (Protection Enable) bit in CR0 (Control Register 0)
-  ;mov cr0, eax
-  jmp 0x8:cpu2
+  jmp 0x8:dword cpu2
 far_jmp_end:
 ap_end:
+
+[bits 32]
+
+section .bss
+align 4096
+stack_bottom:
+    resb 1024
+stack_top:
