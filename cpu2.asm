@@ -21,6 +21,11 @@ gdt_pointer:
 
 past_header:
   cli
+  ; enable protected mode in the cr0 register
+  mov eax, cr0
+  or eax, 0x1
+  mov cr0, eax
+
   mov esp, stack_top
 
   lgdt [cs:gdt_pointer - ap_entry]
@@ -31,10 +36,6 @@ past_header:
   mov fs, ax
   mov gs, ax
 
-  ; enable protected mode in the cr0 register
-  mov eax, cr0
-  or eax, 0x1
-  mov cr0, eax
   jmp 0x8:dword cpu2
 far_jmp_end:
 ap_end:
