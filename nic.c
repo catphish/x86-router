@@ -3,6 +3,7 @@
 #include "nic.h"
 #include "malloc.h"
 #include "debug.h"
+#include "pci.h"
 
 #define CTRL     0x0000
 #define STATUS   0x0008
@@ -36,6 +37,29 @@ inline static uint32_t read_register(struct nic *nic, uint32_t offset) {
   volatile uint32_t * r;
   r = (uint32_t *) (nic->base_address + offset);
   return(*r);
+}
+
+void detect_nics(struct nic **nic) {
+  uint32_t bus;
+  uint32_t device;
+
+  putstring("Scannig PCIe bus.\n");
+  for(bus=0;bus<256;bus++) {
+    for(device = 0; device < 32; device++) {
+      if(pciConfigRead(bus,device,0,0) == 0x15218086) {
+        *nic = malloc(sizeof(struct nic));
+        (*nic)->base_address = pciConfigRead(bus,device,0,0x10) & 0xfffffff0;
+        putstring("NIC detected: ");
+        puthex8(bus);
+        putchar(':');
+        puthex8(device);
+        putchar('\n');
+        nic_reset(*nic);
+        nic++;
+      }
+    }
+  }
+  putstring("Done scanning.\n");
 }
 
 void nic_reset(struct nic *nic) {
