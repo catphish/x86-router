@@ -1,14 +1,6 @@
 ENTRY(start)
 
 SECTIONS {
-    /* This contains real mode code to boot additional processors */
-    . = 0x8000;
-
-    .cpu2 :
-    {
-     cpu2.o(.text)
-    }
-
     /* All protected mode code sits above 1MB */
     . = 1M;
 
@@ -49,4 +41,3 @@ SECTIONS {
     . = ALIGN(4096);
     _end = .;
 }
-

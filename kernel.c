@@ -7,9 +7,22 @@
 #include "malloc.h"
 #include "interrupt.h"
 
+void cpu2() {
+  putstring("Hello from CPU 2");
+  while(1) asm("hlt");
+}
+
+void install_ap_entry() {
+  extern char ap_entry[];
+  extern uint32_t ap_length;
+  putstring("Copying AP boot code.\n");
+  memcpy((char*)0x80000, ap_entry, ap_length);
+}
+
 void kernel_main(multiboot_info_t* mbd) {
   unsigned int i;
   idt_install();
+  install_ap_entry();
   (void)(mbd); // Suppress warning abut mbd, we'll use this later
   putstring("Hello world. I am a router. Moo.\n");
 
@@ -55,7 +68,7 @@ void kernel_main(multiboot_info_t* mbd) {
   // Send to all AP, begin execution at page 8 (0x8000)
   putstring("Sending SIPI\n");
   *lapic_offset_310 = 0x00000000;
-  *lapic_offset_300 = 0x000C4600+0x8;
+  *lapic_offset_300 = 0x000C4600+0x80;
 
   //asm volatile("hlt");
   //puthex8(1 / 0);

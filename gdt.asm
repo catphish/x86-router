@@ -1,3 +1,5 @@
+global gdt_data
+global end_of_gdt
 gdt_data:
     dq 0
 

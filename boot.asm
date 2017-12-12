@@ -12,6 +12,7 @@ align 4
 
 section .bss
 align 4096
+global page_directory
 page_directory:
     resb 4096
 stack_bottom:
