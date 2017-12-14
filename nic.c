@@ -156,7 +156,7 @@ void nic_forward(struct nic *rxnic, struct nic *txnic) {
       // Incremement TX pointer
       txnic->tx_ring_next = (txnic->tx_ring_next + 1) % RING_SIZE;
     } else {
-      putchar('.');
+      //putchar('');
     }
     // We've processed this RX descriptor so zero its status
     rxnic->rx_ring[rxnic->rx_ring_next].status = 0;

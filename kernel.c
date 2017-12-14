@@ -6,13 +6,14 @@
 #include "malloc.h"
 #include "interrupt.h"
 #include "smp.h"
+#include "acpi.h"
 
 void kernel_main(multiboot_info_t* mbd) {
   idt_install();
   install_ap_entry();
   (void)(mbd); // Suppress warning abut mbd, we'll use this later
   putstring("Hello world. I am a router. Moo.\n");
-
+  find_rsdp();
   detect_nics(nic);
   start_aps();
   // while(1) {
