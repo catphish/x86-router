@@ -56,17 +56,39 @@ void browse_sdt(struct rsdt *rsdt) {
 }
 
 void browse_madt(struct madt *madt) {
-  // LAPIC address found here: madt->local_controller_address
+  putstring("Local APIC address: ");
+  puthex32(madt->local_controller_address);
+  putchar('\n');
   uint32_t offset = 0;
   uint32_t madt_data_length = madt->header.length - sizeof(struct sdt_header) - 8;
+  volatile uint32_t *io_api_address;
+  //volatile uint32_t *ioregsel;
+  //volatile uint32_t *iowin;
   while(offset < madt_data_length) {
     struct madt_entry *entry = (void*)madt->entries + offset;
     switch(entry->type) {
       case 0 :
-        putstring("Processor detected.\n");
+        putstring("Processor detected. APIC ID: ");
+        puthex8(*((uint8_t*)(madt->entries + offset + 3)));
+        putchar('\n');
         break;
       case 1 :
-        putstring("IO APIC detected.\n");
+        putstring("IO APIC detected: ");
+        io_api_address = (uint32_t*)(madt->entries + offset + 4);
+        //ioregsel = (uint32_t*) (*io_api_address);
+        //iowin    = (uint32_t*) (*io_api_address + 0x10);
+        puthex32(*io_api_address);
+        putchar('\n');
+        //putstring("Scanning IO APIC:\n");
+        //for(int n = 0x10; n < 0x10+24*2; n+=2) {
+        //  *ioregsel = n+1;
+        //  puthex32(*iowin);
+        //  putchar('.');
+        //  *ioregsel = n;
+        //  puthex32(*iowin);
+        //  putchar('\n');
+        //}
+        //putchar('\n');
         break;
     }
     offset += entry->length;

@@ -27,6 +27,7 @@ idt_load:
 %endmacro
 
 ISR_NOERRCODE 32
+ISR_NOERRCODE 33
 
 ; In isr.c
 extern isr_handler

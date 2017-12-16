@@ -42,6 +42,8 @@ inline static uint32_t read_register(struct nic *nic, uint32_t offset) {
 void detect_nics(struct nic **nic) {
   uint32_t bus;
   uint32_t device;
+  uint32_t n;
+  uint32_t msi_config;
 
   putstring("Scannig PCIe bus.\n");
   for(bus=0;bus<256;bus++) {
@@ -54,6 +56,22 @@ void detect_nics(struct nic **nic) {
         putchar(':');
         puthex8(device);
         putchar('\n');
+
+        msi_config = pciConfigRead(bus,device,0,0x50);
+        msi_config |= 1<<16;
+        pciConfigWrite(bus,device,0,0x50, msi_config);
+        pciConfigWrite(bus,device,0,0x54, 0xFEE00000);
+        pciConfigWrite(bus,device,0,0x58, 0x00000000);
+        pciConfigWrite(bus,device,0,0x5C, 0x21);
+
+        putstring("PCIe Config:\n");
+        for(n=0x50; n<0x68; n+=0x4) {
+          puthex8(n);
+          putstring(": ");
+          puthex32(pciConfigRead(bus,device,0,n));
+          putchar('\n');
+        }
+        putchar('\n');
         nic_reset(*nic);
         nic++;
       }
@@ -64,25 +82,25 @@ void detect_nics(struct nic **nic) {
 
 void nic_reset(struct nic *nic) {
   int n;
-  // We could disable interrupts, reset the NIC, and disable them again.
-  // The documentation suggests doing this.
+  // The documentation suggests this reset procedure...
+
+  // Mask all interrupts
   write_register(nic, 0x1528, 0xffffffff);
+  // Disable bus mastering
   putstring("Disabling bus master\n");
   write_register(nic, CTRL, read_register(nic, CTRL) | (1<<2));
-  while(read_register(nic, STATUS) & (1<<19)) {
-    puthex32(read_register(nic, STATUS));
-    putchar('\n');
-  }
+  // Wait for bus mastering to be disabled
+  while(read_register(nic, STATUS) & (1<<19));
 
   putstring("Resetting\n");
   write_register(nic, CTRL, read_register(nic, CTRL) | (1<<26));
-  while(!(read_register(nic, STATUS) & (1<<21))) {
-    puthex32(read_register(nic, STATUS));
-    putchar('\n');
-  }
+  // Wait for reset to complete
+  while(!(read_register(nic, STATUS) & (1<<21)));
+  // Mask all interrupts again
   write_register(nic, 0x1528, 0xffffffff);
 
   // Pretty simple base setup, enable link, auto-negotiate everything
+  // Also re-enables bus mastering
   write_register(nic, CTRL, 1<<6);
 
   // Erase Multicast Table
@@ -127,6 +145,7 @@ void nic_reset(struct nic *nic) {
     nic->tx_ring[n].address = (uint32_t)malloc(2048);
     nic->tx_ring[n].status = 1;
   }
+  // A bunch more tx config I haven't documented yet
   write_register(nic, TDH, 0);
   write_register(nic, TDT, 0);
   write_register(nic, TDBAL, (uint32_t)nic->tx_ring);
@@ -134,6 +153,12 @@ void nic_reset(struct nic *nic) {
   write_register(nic, TDLEN, sizeof(struct tx_descriptor) * RING_SIZE);
   write_register(nic, TXDCTL, (1<<25));
   write_register(nic, TCTL, read_register(nic, TCTL)|2);
+
+  // Enable interrupts
+  write_register(nic, 0x1508, 1<<7);
+  putstring("IMS value: ");
+  puthex32(read_register(nic, 0x1508));
+  putchar('\n');
 }
 
 uint32_t count = 0;
@@ -168,9 +193,9 @@ void nic_forward(struct nic *rxnic, struct nic *txnic) {
   write_register(txnic, TDT, txnic->tx_ring_next);
 }
 
-void nic_tx_status(struct nic *txnic) {
-  puthex32(read_register(txnic, TDT));
-  putchar(' ');
-  puthex32(read_register(txnic, TDH));
+void check_icr(struct nic *nic)
+{
+  putstring("ICR value: ");
+  puthex32(read_register(nic, 0x1500));
   putchar('\n');
 }

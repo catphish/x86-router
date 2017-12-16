@@ -21,18 +21,21 @@ void install_ap_entry() {
 }
 
 void start_aps() {
+  // Set up the local APIC timer
   volatile uint32_t *lapic_timer_interrupt_vector = (void*)0xFEE00320;
   volatile uint32_t *lapic_timer_divide = (void*)0xFEE003E0;
   volatile uint32_t *lapic_timer_initial_count = (void*)0xFEE00380;
   *lapic_timer_interrupt_vector = 0x20020;
   *lapic_timer_divide = 0b1011;
+  *lapic_timer_initial_count = 1000000000;
+  // Enable the local APIC
   asm volatile(
     "mov $27, %%ecx\n\t"
     "rdmsr\n\t"
     "bts $11, %%eax\n\t"
     "wrmsr\n\t" : : : "eax", "ebx", "ecx", "edx"
   );
-  *lapic_timer_initial_count = 1000000000;
+  // Enable interrupts
   asm volatile("sti");
 
   // Set up pointers to IPI registers in the LAPIC

@@ -35,5 +35,5 @@ struct nic *nic[32];
 
 void nic_reset(struct nic *nic);
 void nic_forward(struct nic *rxnic, struct nic *txnic);
-void nic_tx_status(struct nic *txnic);
 void detect_nics(struct nic **nic);
+void check_icr(struct nic *nic);

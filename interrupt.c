@@ -2,6 +2,7 @@
 #include "malloc.h"
 #include "debug.h"
 #include "interrupt.h"
+#include "nic.h"
 
 typedef struct registers
 {
@@ -65,6 +66,7 @@ void idt_install()
 
   /* Add any new ISRs to the IDT here using idt_set_gate */
   idt_set_gate(32, (uint32_t)isr32, 0x08, 0x8E);
+  idt_set_gate(33, (uint32_t)isr33, 0x08, 0x8E);
 
   /* Points the processor's internal register to the new IDT */
   idt_load();
@@ -77,4 +79,5 @@ void isr_handler(registers_t regs)
    putchar(' ');
    puthex32(regs.err_code);
    putchar('\n');
+   check_icr(nic[0]);
 }
