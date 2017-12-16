@@ -27,6 +27,8 @@
 #define TDLEN    0xE008
 #define TXDCTL   0xE028
 
+volatile uint32_t interrupt_fired = 0;
+
 inline static void write_register(struct nic *nic, uint32_t offset, uint32_t value) {
   volatile uint32_t * r;
   r = (uint32_t *) (nic->base_address + offset);
@@ -60,9 +62,13 @@ void detect_nics(struct nic **nic) {
         msi_config = pciConfigRead(bus,device,0,0x50);
         msi_config |= 1<<16;
         pciConfigWrite(bus,device,0,0x50, msi_config);
-        pciConfigWrite(bus,device,0,0x54, 0xFEE00000);
+        //pciConfigWrite(bus,device,0,0x54, 0xFEE00000);
+        putchar('\n');
+        pciConfigWrite(bus,device,0,0x54, (uint32_t)&interrupt_fired);
         pciConfigWrite(bus,device,0,0x58, 0x00000000);
         pciConfigWrite(bus,device,0,0x5C, 0x21);
+
+        nic_reset(*nic);
 
         putstring("PCIe Config:\n");
         for(n=0x50; n<0x68; n+=0x4) {
@@ -72,7 +78,6 @@ void detect_nics(struct nic **nic) {
           putchar('\n');
         }
         putchar('\n');
-        nic_reset(*nic);
         nic++;
       }
     }
@@ -196,6 +201,10 @@ void nic_forward(struct nic *rxnic, struct nic *txnic) {
 void check_icr(struct nic *nic)
 {
   putstring("ICR value: ");
+  puthex32(interrupt_fired);
+  putchar(' ');
+  interrupt_fired = 0;
   puthex32(read_register(nic, 0x1500));
+  write_register(nic, 0x1500, 0xffffffff);
   putchar('\n');
 }
