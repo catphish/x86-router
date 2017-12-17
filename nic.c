@@ -51,13 +51,10 @@
 #define I350_ID                      0x15218086
 #define I350_MSI_OFFSET              0x50
 #define I350_MSI_LOW_ADDRESS_OFFSET  0x54
-#define I350_MSI_HIGH_ADDRESS_OFFSET 0x58
-#define I350_MSI_DATA_OFFSET         0x5C
+//#define I350_MSI_HIGH_ADDRESS_OFFSET 0x58
+#define I350_MSI_DATA_OFFSET         0x58
 #define PCI_MSI_ENABLE               0x10000
 #define PCI_BAR0                     0x10
-
-// Allocate some memory to test MSI memory write
-volatile uint32_t interrupt_fired = 0;
 
 // Inline helper method to write NIC registers
 inline static void write_register(struct nic *nic, uint32_t offset, uint32_t value) {
@@ -100,23 +97,12 @@ void detect_nics(struct nic **nic) {
         msi_config |= PCI_MSI_ENABLE;
         // Write 0x21 to trigger vector 0x21
         pciConfigWrite(bus,device,0,I350_MSI_DATA_OFFSET, 0x21);
-        //pciConfigWrite(bus,device,0,I350_MSI_LOW_ADDRESS_OFFSET, 0xFEE00000);
-        // Temporary variable address used for testing
-        pciConfigWrite(bus,device,0,I350_MSI_LOW_ADDRESS_OFFSET, (uint32_t)&interrupt_fired);
-        pciConfigWrite(bus,device,0,I350_MSI_HIGH_ADDRESS_OFFSET, 0x00000000);
+        pciConfigWrite(bus,device,0,I350_MSI_LOW_ADDRESS_OFFSET, 0xFEE00000);
+        //pciConfigWrite(bus,device,0,I350_MSI_HIGH_ADDRESS_OFFSET, 0x00000000);
         pciConfigWrite(bus,device,0,I350_MSI_OFFSET, msi_config);
 
         // Reset and initialize the NIC
         nic_reset(*nic);
-
-        // Write the PCI address space for debugging
-        putstring("PCIe Config:\n");
-        for(n=0x00; n<0x100; n+=0x4) {
-          puthex8(n);
-          putstring(": ");
-          puthex32(pciConfigRead(bus,device,0,n));
-          putchar('\n');
-        }
 
         nic++;
       }
@@ -204,14 +190,6 @@ void nic_reset(struct nic *nic) {
   // Enable specific interrupts
   write_register(nic, IMS, IMS_RXDW);
   write_register(nic, EIMS, EIMS_OTHER);
-
-  putstring("IMS value: ");
-  puthex32(read_register(nic, IMS));
-  putchar('\n');
-
-  putstring("EIMS value: ");
-  puthex32(read_register(nic, EIMS));
-  putchar('\n');
 }
 
 uint32_t count = 0;
@@ -247,24 +225,7 @@ void nic_forward(struct nic *rxnic, struct nic *txnic) {
 }
 
 // This gets run at 1-second intervals by a timer
-void check_icr(struct nic *nic)
-{
-  putstring("ICR value: ");
-  puthex32(read_register(nic, ICR));
-  putchar('\n');
-
-  putstring("EICR value: ");
-  puthex32(read_register(nic, EICR));
-  putchar('\n');
-
-  putstring("interrupt_fired value: ");
-  puthex32(interrupt_fired);
-  putchar('\n');
-
+void clear_icr(struct nic *nic) {
   // Clear interrupt causes
   write_register(nic, ICR, 0xffffffff);
-  write_register(nic, EICR, 0xffffffff);
-  interrupt_fired = 0;
-
-  putchar('\n');
 }

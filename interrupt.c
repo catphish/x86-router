@@ -74,10 +74,19 @@ void idt_install()
 
 void isr_handler(registers_t regs)
 {
-   putstring("recieved interrupt: ");
-   puthex32(regs.int_no);
-   putchar(' ');
-   puthex32(regs.err_code);
-   putchar('\n');
-   check_icr(nic[0]);
+  switch(regs.int_no) {
+    case 0x20 :
+      putstring("Received timer interrupt.\n");
+      break;
+    case 0x21 :
+      putstring("Received NIC RX interrupt.\n");
+      clear_icr(nic[0]);
+      break;
+    default :
+      putstring("recieved interrupt: ");
+      puthex32(regs.int_no);
+      putchar(' ');
+      puthex32(regs.err_code);
+      putchar('\n');
+  }
 }
