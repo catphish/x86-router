@@ -51,6 +51,12 @@ void browse_sdt(struct rsdt *rsdt) {
         struct sdt_header *entry = (rsdt->entry_address[i]);
         if(strcmp(entry->signature, "APIC", 4)) {
           browse_madt((struct madt *)entry);
+        } else {
+          putchar(entry->signature[0]);
+          putchar(entry->signature[1]);
+          putchar(entry->signature[2]);
+          putchar(entry->signature[3]);
+          putchar('\n');
         }
     }
 }

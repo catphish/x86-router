@@ -61,23 +61,23 @@ void detect_nics(struct nic **nic) {
 
         msi_config = pciConfigRead(bus,device,0,0x50);
         msi_config |= 1<<16;
-        pciConfigWrite(bus,device,0,0x50, msi_config);
-        //pciConfigWrite(bus,device,0,0x54, 0xFEE00000);
-        putchar('\n');
-        pciConfigWrite(bus,device,0,0x54, (uint32_t)&interrupt_fired);
-        pciConfigWrite(bus,device,0,0x58, 0x00000000);
         pciConfigWrite(bus,device,0,0x5C, 0x21);
+        pciConfigWrite(bus,device,0,0x54, 0xFEE00000);
+        //pciConfigWrite(bus,device,0,0x54, (uint32_t)&interrupt_fired);
+        pciConfigWrite(bus,device,0,0x58, 0x00000000);
+        pciConfigWrite(bus,device,0,0x50, msi_config);
 
         nic_reset(*nic);
 
         putstring("PCIe Config:\n");
-        for(n=0x50; n<0x68; n+=0x4) {
+        for(n=0x00; n<0x100; n+=0x4) {
           puthex8(n);
           putstring(": ");
           puthex32(pciConfigRead(bus,device,0,n));
           putchar('\n');
         }
         putchar('\n');
+
         nic++;
       }
     }
@@ -104,9 +104,16 @@ void nic_reset(struct nic *nic) {
   // Mask all interrupts again
   write_register(nic, 0x1528, 0xffffffff);
 
-  // Pretty simple base setup, enable link, auto-negotiate everything
-  // Also re-enables bus mastering
-  write_register(nic, CTRL, 1<<6);
+  putstring("CTRL: ");
+  puthex32(read_register(nic, CTRL));
+  putchar('\n');
+
+  putstring("CTRL_EXT: ");
+  puthex32(read_register(nic, CTRL_EXT));
+  putchar('\n');
+
+  // Tell the NIC a driver is loaded
+  write_register(nic, CTRL_EXT, read_register(nic, CTRL_EXT)|1<<28);
 
   // Erase Multicast Table
   for(n=0x5200;n<0x5400;n+=4) {
@@ -161,8 +168,13 @@ void nic_reset(struct nic *nic) {
 
   // Enable interrupts
   write_register(nic, 0x1508, 1<<7);
+  write_register(nic, 0x1524, 1<<31);
+
   putstring("IMS value: ");
   puthex32(read_register(nic, 0x1508));
+  putchar('\n');
+  putstring("EIMS value: ");
+  puthex32(read_register(nic, 0x1524));
   putchar('\n');
 }
 
