@@ -8,8 +8,6 @@ void ap_c_entry() {
   putstring("Hello from additional CPU ");
   puthex8(*lapic_id>>24);
   putchar('\n');
-  while(1)
-    nic_forward(nic[0], nic[1]);
   while(1) asm("hlt");
 }
 
@@ -20,14 +18,14 @@ void install_ap_entry() {
   memcpy((char*)0x80000, ap_asm_start, ap_asm_length);
 }
 
-void start_aps() {
+void configure_lapic() {
   // Set up the local APIC timer
   volatile uint32_t *lapic_timer_interrupt_vector = (void*)0xFEE00320;
   volatile uint32_t *lapic_timer_divide = (void*)0xFEE003E0;
   volatile uint32_t *lapic_timer_initial_count = (void*)0xFEE00380;
   *lapic_timer_interrupt_vector = 0x20020;
   *lapic_timer_divide = 0b1011;
-  *lapic_timer_initial_count = 1000000000;
+  *lapic_timer_initial_count = 1000000000/1000; // 1ms
   // Enable the local APIC
   asm volatile(
     "mov $27, %%ecx\n\t"
@@ -37,7 +35,9 @@ void start_aps() {
   );
   // Enable interrupts
   asm volatile("sti");
+}
 
+void start_aps() {
   // Set up pointers to IPI registers in the LAPIC
   volatile uint32_t *lapic_offset_300 = (void*)0xFEE00300;
   volatile uint32_t *lapic_offset_310 = (void*)0xFEE00310;

@@ -31,6 +31,8 @@
 #define EIMC     0x1528
 #define EIMS     0x1524
 #define IMS      0x1508
+#define EITR     0x1680
+
 #define MULTICAST_TABLE_START 0x5200
 #define MULTICAST_TABLE_END   0x5400
 
@@ -72,11 +74,12 @@ inline static uint32_t read_register(struct nic *nic, uint32_t offset) {
 
 // Loop over PCI bus to find NICs
 // No support for multiple functions yet
-void detect_nics(struct nic **nic) {
+void detect_nics() {
   uint32_t bus;
   uint32_t device;
   uint32_t msi_config;
-  uint32_t n;
+
+  struct nic **nic = nics;
 
   putstring("Scannig PCIe bus.\n");
   // Loop over all devices
@@ -187,6 +190,9 @@ void nic_reset(struct nic *nic) {
   // Globaly enable TX
   write_register(nic, TCTL, read_register(nic, TCTL)|TCTL_EN);
 
+  // Interupt rate limit
+  write_register(nic, EITR, (500<<2));
+
   // Enable specific interrupts
   write_register(nic, IMS, IMS_RXDW);
   write_register(nic, EIMS, EIMS_OTHER);
@@ -224,7 +230,6 @@ void nic_forward(struct nic *rxnic, struct nic *txnic) {
   write_register(txnic, TDT, txnic->tx_ring_next);
 }
 
-// This gets run at 1-second intervals by a timer
 void clear_icr(struct nic *nic) {
   // Clear interrupt causes
   write_register(nic, ICR, 0xffffffff);

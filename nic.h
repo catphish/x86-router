@@ -1,6 +1,6 @@
 #include "stdint.h"
 
-#define RING_SIZE 128
+#define RING_SIZE 2048
 
 struct rx_descriptor {
   volatile uint32_t address;
@@ -31,9 +31,9 @@ struct nic {
   uint32_t tx_ring_next;
 };
 
-struct nic *nic[32];
+struct nic *nics[32];
 
 void nic_reset(struct nic *nic);
 void nic_forward(struct nic *rxnic, struct nic *txnic);
-void detect_nics(struct nic **nic);
+void detect_nics();
 void clear_icr(struct nic *nic);

@@ -14,11 +14,8 @@ void kernel_main(multiboot_info_t* mbd) {
   install_ap_entry();
   putstring("Hello world. I am a router. Moo.\n");
   find_rsdp();
+  detect_nics();
+  configure_lapic();
   start_aps();
-  detect_nics(nic);
-  // while(1) {
-  //   nic_forward(nic[0], nic[2]);
-  //   nic_forward(nic[3], nic[3]);
-  //   nic_forward(nic[2], nic[1]);
-  // }
+  while(1) asm("hlt");
 }

@@ -79,11 +79,12 @@ void isr_handler(registers_t regs)
       putstring("Received timer interrupt.\n");
       break;
     case 0x21 :
-      putstring("Received NIC RX interrupt.\n");
-      clear_icr(nic[0]);
+      //putstring("Received NIC RX interrupt.\n");
+      clear_icr(nics[0]);
+      nic_forward(nics[0], nics[0]);
       break;
     default :
-      putstring("recieved interrupt: ");
+      putstring("Recieved interrupt: ");
       puthex32(regs.int_no);
       putchar(' ');
       puthex32(regs.err_code);

@@ -21,9 +21,9 @@ sudo qemu-system-x86_64 -kernel kernel.bin -smp cores=2,threads=1,sockets=1 -m 1
 -display none \
 -enable-kvm \
 -device pci-assign,host=08:00.0 \
--device pci-assign,host=08:00.1 \
 -chardev stdio,id=mydebug -device isa-debugcon,chardev=mydebug \
 #-monitor stdio \
+#-device pci-assign,host=08:00.1 \
 #-device pci-assign,host=08:00.2 \
 #-device pci-assign,host=08:00.3
 #-boot c -vnc :0
