@@ -1,6 +1,7 @@
 #include "debug.h"
 #include "stdint.h"
 #include "acpi.h"
+#include "malloc.h"
 
 inline static uint32_t read_register(uint32_t address) {
   volatile uint32_t * r;
@@ -18,7 +19,10 @@ uint32_t strcmp(char* s1, char* s2, uint32_t length) {
   return(1);
 }
 
-uint32_t find_rsdp() {
+void parse_acpi() {
+  memset(cpu_list, 0, 256);
+  cpu_count = 0;
+
   for(uint32_t address = 0x00000000; address < 0x00100000; address += 16)
   {
     if(strcmp((char*)address, "RSD PTR ", 8)) {
@@ -37,65 +41,43 @@ uint32_t find_rsdp() {
         putstring(" (valid) ");
         puthex32(rsdp_descriptor->rsdt_address);
         putchar('\n');
-        browse_sdt((void*)rsdp_descriptor->rsdt_address);
-        return rsdp_descriptor->rsdt_address;
+        parse_sdt((void*)rsdp_descriptor->rsdt_address);
       }
     }
   }
-  return 0;
 }
 
-void browse_sdt(struct rsdt *rsdt) {
+void parse_sdt(struct rsdt *rsdt) {
     uint32_t entries = (rsdt->header.length - sizeof(rsdt->header)) / 4;
     for (uint32_t i = 0; i < entries; i++) {
         struct sdt_header *entry = (rsdt->entry_address[i]);
         if(strcmp(entry->signature, "APIC", 4)) {
-          browse_madt((struct madt *)entry);
-        } else {
-          putchar(entry->signature[0]);
-          putchar(entry->signature[1]);
-          putchar(entry->signature[2]);
-          putchar(entry->signature[3]);
-          putchar('\n');
+          parse_madt((struct madt *)entry);
         }
     }
 }
 
-void browse_madt(struct madt *madt) {
+void parse_madt(struct madt *madt) {
   putstring("Local APIC address: ");
   puthex32(madt->local_controller_address);
   putchar('\n');
   uint32_t offset = 0;
   uint32_t madt_data_length = madt->header.length - sizeof(struct sdt_header) - 8;
-  volatile uint32_t *io_api_address;
-  //volatile uint32_t *ioregsel;
-  //volatile uint32_t *iowin;
   while(offset < madt_data_length) {
     struct madt_entry *entry = (void*)madt->entries + offset;
-    switch(entry->type) {
-      case 0 :
-        putstring("Processor detected. APIC ID: ");
-        puthex8(*((uint8_t*)(madt->entries + offset + 3)));
-        putchar('\n');
-        break;
-      case 1 :
-        putstring("IO APIC detected: ");
-        io_api_address = (uint32_t*)(madt->entries + offset + 4);
-        //ioregsel = (uint32_t*) (*io_api_address);
-        //iowin    = (uint32_t*) (*io_api_address + 0x10);
-        puthex32(*io_api_address);
-        putchar('\n');
-        //putstring("Scanning IO APIC:\n");
-        //for(int n = 0x10; n < 0x10+24*2; n+=2) {
-        //  *ioregsel = n+1;
-        //  puthex32(*iowin);
-        //  putchar('.');
-        //  *ioregsel = n;
-        //  puthex32(*iowin);
-        //  putchar('\n');
-        //}
-        //putchar('\n');
-        break;
+    if(entry->type == 0) {
+      uint8_t *apic_id = (uint8_t*)(madt->entries + offset + 3);
+      uint32_t *lapic_id = (void*)0xFEE00020;
+
+      putstring("Processor detected. APIC ID: ");
+      puthex8(*apic_id);
+      if(*apic_id == *lapic_id>>24) {
+        putstring(" (PRIMARY)");
+      } else {
+        cpu_list[cpu_count] = *apic_id;
+        cpu_count++;
+      }
+      putchar('\n');
     }
     offset += entry->length;
   }

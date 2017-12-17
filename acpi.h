@@ -1,3 +1,6 @@
+uint8_t cpu_list[256];
+uint8_t cpu_count;
+
 struct rsdp_descriptor {
  char signature[8];
  uint8_t checksum;
@@ -36,6 +39,6 @@ struct madt_entry {
   char data[];
 }__attribute__ ((packed));
 
-uint32_t find_rsdp();
-void browse_sdt(struct rsdt *rsdt);
-void browse_madt(struct madt *madt);
+void parse_acpi();
+void parse_sdt(struct rsdt *rsdt);
+void parse_madt(struct madt *madt);

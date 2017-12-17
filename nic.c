@@ -51,11 +51,6 @@
 #define EIMS_OTHER            (1<<31)
 
 #define I350_ID                      0x15218086
-#define I350_MSI_OFFSET              0x50
-#define I350_MSI_LOW_ADDRESS_OFFSET  0x54
-//#define I350_MSI_HIGH_ADDRESS_OFFSET 0x58
-#define I350_MSI_DATA_OFFSET         0x58
-#define PCI_MSI_ENABLE               0x10000
 #define PCI_BAR0                     0x10
 
 // Inline helper method to write NIC registers
@@ -77,9 +72,8 @@ inline static uint32_t read_register(struct nic *nic, uint32_t offset) {
 void detect_nics() {
   uint32_t bus;
   uint32_t device;
-  uint32_t msi_config;
 
-  struct nic **nic = nics;
+  nic_count = 0;
 
   putstring("Scannig PCIe bus.\n");
   // Loop over all devices
@@ -88,26 +82,17 @@ void detect_nics() {
       // Read the vendor and device ID, look for i350 devices
       if(pciConfigRead(bus,device,0,0) == I350_ID) {
         // Allocate some memory for this NIC
-        *nic = malloc(sizeof(struct nic));
+        nic_list[nic_count] = malloc(sizeof(struct nic));
         // Store the base memory address of this NIC
-        (*nic)->base_address = pciConfigRead(bus,device,0,PCI_BAR0) & 0xfffffff0;
+        nic_list[nic_count]->base_address = pciConfigRead(bus,device,0,PCI_BAR0) & 0xfffffff0;
         // Inform the user
         putstring("NIC detected: ");
         puthex8(bus); putchar(':'); puthex8(device); putchar('\n');
 
-        // The i350 has MSI config starting at 0x50 in the PCI configuration space.
-        msi_config = pciConfigRead(bus,device,0,I350_MSI_OFFSET);
-        msi_config |= PCI_MSI_ENABLE;
-        // Write 0x21 to trigger vector 0x21
-        pciConfigWrite(bus,device,0,I350_MSI_DATA_OFFSET, 0x21);
-        pciConfigWrite(bus,device,0,I350_MSI_LOW_ADDRESS_OFFSET, 0xFEE00000);
-        //pciConfigWrite(bus,device,0,I350_MSI_HIGH_ADDRESS_OFFSET, 0x00000000);
-        pciConfigWrite(bus,device,0,I350_MSI_OFFSET, msi_config);
-
         // Reset and initialize the NIC
-        nic_reset(*nic);
+        nic_reset(nic_list[nic_count]);
 
-        nic++;
+        nic_count++;
       }
     }
   }
@@ -116,8 +101,6 @@ void detect_nics() {
 
 void nic_reset(struct nic *nic) {
   int n;
-  // The documentation suggests this reset procedure...
-
   // Mask all interrupts
   write_register(nic, EIMC, 0xffffffff);
   // Disable bus mastering
@@ -150,9 +133,6 @@ void nic_reset(struct nic *nic) {
     nic->rx_ring[n].address_upper = 0;
     nic->rx_ring[n].address = (uint32_t)malloc(2048);
   }
-
-  // Configure multi-ring receive to default single ring operation
-  // write_register(nic, MRQC, 0); // This is the default
 
   // Configure Base address of rx ring 0
   write_register(nic, RDBAL, (uint32_t)nic->rx_ring);
@@ -189,13 +169,6 @@ void nic_reset(struct nic *nic) {
   write_register(nic, TXDCTL, read_register(nic, TXDCTL) | TXDCTL_ENABLE);
   // Globaly enable TX
   write_register(nic, TCTL, read_register(nic, TCTL)|TCTL_EN);
-
-  // Interupt rate limit
-  write_register(nic, EITR, (500<<2));
-
-  // Enable specific interrupts
-  write_register(nic, IMS, IMS_RXDW);
-  write_register(nic, EIMS, EIMS_OTHER);
 }
 
 uint32_t count = 0;
@@ -217,8 +190,6 @@ void nic_forward(struct nic *rxnic, struct nic *txnic) {
 
       // Incremement TX pointer
       txnic->tx_ring_next = (txnic->tx_ring_next + 1) % RING_SIZE;
-    } else {
-      //putchar('');
     }
     // We've processed this RX descriptor so zero its status
     rxnic->rx_ring[rxnic->rx_ring_next].status = 0;
@@ -228,9 +199,4 @@ void nic_forward(struct nic *rxnic, struct nic *txnic) {
   }
   write_register(rxnic, RDT, (rxnic->rx_ring_next - 1) % RING_SIZE);
   write_register(txnic, TDT, txnic->tx_ring_next);
-}
-
-void clear_icr(struct nic *nic) {
-  // Clear interrupt causes
-  write_register(nic, ICR, 0xffffffff);
 }

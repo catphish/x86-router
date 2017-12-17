@@ -1,14 +1,16 @@
 [bits 16]
 global ap_asm_length
 global ap_asm_start
+global ap_stack_pointer_offset
 extern gdt_data
 extern ap_c_entry
+extern page_directory
 
 ap_asm_start:
   jmp past_header
   align 8
   ap_asm_length: dd ap_asm_end - ap_asm_start
-  dd 0         ; Padding
+  ap_stack_pointer_offset: dd after_stack_pointer - ap_asm_start - 4
 
   dw 0         ; Padding
 gdt_pointer:
@@ -22,8 +24,6 @@ pm_entry_pointer:
 past_header:
   ; Disable interrupts
   cli
-  ; Initialize stack. TODO: one per CPU
-  mov esp, stack_top
   ; Load the GDT
   lgdt [cs:gdt_pointer - ap_asm_start]
   ; Calculate location for far jump
@@ -48,13 +48,25 @@ pm_entry:
   mov es, ax
   mov fs, ax
   mov gs, ax
+
+  ; load page_directory to cr3 register
+  mov eax, page_directory
+  mov cr3, eax
+
+  ; enable PSE for 4MB pages
+  mov eax, cr4
+  or eax, 0x00000010
+  mov cr4, eax
+
+  ; enable paging in the cr0 register
+  mov eax, cr0
+  or eax, 1 << 31
+  mov cr0, eax
+
+  ; Initialize stack.
+  mov esp, 0
+after_stack_pointer:
+
   ; Far jump again to C entry point
   jmp 0x8:ap_c_entry
 ap_asm_end:
-
-
-section .bss
-align 4096
-stack_bottom:
-    resb 1024
-stack_top:
