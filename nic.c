@@ -206,11 +206,11 @@ void nic_reset(struct nic *nic) {
   write_register(nic, EIMS, EIMS_OTHER);
 
   putstring("IMS value: ");
-  puthex32(read_register(nic, 0x1508));
+  puthex32(read_register(nic, IMS));
   putchar('\n');
 
   putstring("EIMS value: ");
-  puthex32(read_register(nic, 0x1524));
+  puthex32(read_register(nic, EIMS));
   putchar('\n');
 }
 
