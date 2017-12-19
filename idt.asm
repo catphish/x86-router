@@ -25,7 +25,6 @@ idt_load:
 %endmacro
 
 ISR_NOERRCODE 32
-ISR_NOERRCODE 33
 
 ; In isr.c
 extern isr_handler
@@ -36,8 +35,6 @@ extern isr_handler
 isr_common_stub:
     pusha                    ; Pushes edi,esi,ebp,esp,ebx,edx,ecx,eax
     call isr_handler
-    xor eax, eax
-    mov [0xFEE000B0], eax
     popa                     ; Pops edi,esi,ebp...
     add esp, 8     ; Cleans up the pushed error code and pushed ISR number
     ;sti

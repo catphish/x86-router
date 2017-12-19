@@ -15,9 +15,7 @@ void kernel_main(multiboot_info_t* mbd) {
   parse_acpi();
   detect_nics();
   configure_lapic();
-  start_ap(1);
-  start_ap(2);
-  start_ap(3);
-  arm_timer();
+  for(int n=0; n<cpu_count; n++)
+    start_ap(cpu_list[n]);
   while(1) asm("hlt");
 }

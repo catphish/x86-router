@@ -18,11 +18,11 @@ ld -m elf_i386 -n -o kernel.bin -T linker.ld *.o
 scp kernel.bin 10.0.2.49:kernel.bin
 ssh 10.0.2.49 \
 sudo qemu-system-x86_64 -kernel kernel.bin -smp cores=4,threads=1,sockets=1 -m 128M \
--display none \
+-chardev stdio,id=mydebug -device isa-debugcon,chardev=mydebug \
 -enable-kvm \
+-display none \
 -device pci-assign,host=08:00.0 \
 -device pci-assign,host=08:00.1 \
--chardev stdio,id=mydebug -device isa-debugcon,chardev=mydebug \
 #-monitor stdio \
 #-device pci-assign,host=08:00.2 \
 #-device pci-assign,host=08:00.3

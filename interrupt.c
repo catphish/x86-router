@@ -66,7 +66,6 @@ void idt_install()
 
   /* Add any new ISRs to the IDT here using idt_set_gate */
   idt_set_gate(32, (uint32_t)isr32, 0x08, 0x8E);
-  idt_set_gate(33, (uint32_t)isr33, 0x08, 0x8E);
 
   /* Points the processor's internal register to the new IDT */
   idt_load();
@@ -76,9 +75,11 @@ void isr_handler(registers_t regs)
 {
   switch(regs.int_no) {
     case 0x20 :
-      putstring("Received timer interrupt.\n");
+      // Re-arm local APIC timer
+      *((volatile uint32_t*)0xFEE000B0) = 0;
       break;
     default :
+      // Unexpected interrupt / exception
       putstring("Recieved interrupt: ");
       puthex32(regs.int_no);
       putchar(' ');

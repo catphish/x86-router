@@ -3,6 +3,8 @@
 #include "malloc.h"
 #include "nic.h"
 #include "acpi.h"
+#include "smp.h"
+extern void idt_load();
 
 void ap_c_entry() {
   // General purpose counter
@@ -15,16 +17,22 @@ void ap_c_entry() {
   for(n=0;n<cpu_count;n++) {
     if(cpu_id == cpu_list[n]) cpu_index = n;
   }
+  idt_load();
+  configure_lapic();
+  arm_timer();
+
   putstring("Hello from additional CPU ");
   puthex8(cpu_id);
   putstring(" index ");
   puthex8(cpu_index);
   putchar('\n');
+
   // Choose some NICs and forward frames
   while(1) {
     for(n=cpu_index;n<nic_count;n+=cpu_count) {
       nic_forward(nic_list[n], nic_list[1]);
     }
+    asm("hlt");
   }
 }
 
@@ -40,7 +48,6 @@ void install_ap_entry(uint32_t location) {
 }
 
 void configure_lapic() {
-  // Set up the local APIC timer
   // Enable the local APIC
   asm volatile(
     "mov $27, %%ecx\n\t"
@@ -48,6 +55,10 @@ void configure_lapic() {
     "bts $11, %%eax\n\t"
     "wrmsr\n\t" : : : "eax", "ebx", "ecx", "edx"
   );
+
+  volatile uint32_t *lapic_spurious = (void*)0xFEE000F0;
+  *lapic_spurious = 0x1FF;
+
   // Enable interrupts
   asm volatile("sti");
 }
@@ -58,7 +69,7 @@ void arm_timer() {
   volatile uint32_t *lapic_timer_initial_count = (void*)0xFEE00380;
   *lapic_timer_interrupt_vector = 0x20020;
   *lapic_timer_divide = 0b1011;
-  *lapic_timer_initial_count = 1000000000; // 1 second
+  *lapic_timer_initial_count = 1000000000/2000; // 0.5 ms
 }
 
 void start_ap(uint8_t cpu_id) {
@@ -74,11 +85,10 @@ void start_ap(uint8_t cpu_id) {
   putstring("Sending INIT\n");
   *lapic_offset_300 = 0x00004500;
 
-  // Sleep a little
-  int i = 0x1fffffff; while(--i) asm("");
-
   // Send the SIPI to commence execution
   putstring("Sending SIPI\n");
   *lapic_offset_310 = cpu_id << 24;
   *lapic_offset_300 = 0x00004600+0x8+cpu_id;
+  // Sleep a little
+  int i = 0x1fffffff; while(--i) asm("");
 }
